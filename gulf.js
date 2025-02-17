@@ -7,15 +7,17 @@
 	  */
 	const langMappings = {
 		"en": {
-			base: "Gulf of ",
-			originalCountry: "America",
-			replacementCountry: "Mexico",
+			originalCountry: "Gulf of America",
+			replacementCountry: "Gulf of Mexico",
+			lastWordChar: 'A',
+			firstWordChar: 'G',
 
 		},
 		"de": {
-			base: "Golf von ",
-			originalCountry: "Amerika",
-			replacementCountry: "Mexiko",
+			originalCountry: "Golf von Amerika",
+			replacementCountry: "Golf von Mexiko",
+			lastWordChar: 'A',
+			firstWordChar: 'G',
 
 		},
 		/* Add more languages here as needed */ 
@@ -27,8 +29,8 @@
 	const lang = document.documentElement.getAttribute("lang");
 	const currentLanguage = lang.split('-')[0] || 'en';
 	const mapping = langMappings[currentLanguage];
-	const originalFull = mapping.base + mapping.originalCountry;
-	const replacementFull = mapping.base + mapping.replacementCountry;
+	const originalFull = mapping.originalCountry;
+	const replacementFull = mapping.replacementCountry;
 	/**
 	 * The functions we're patching are available globally on the variable named `_`,
 	 * but they have computer-generated names that change over time
@@ -167,12 +169,22 @@
 
 		// Constants for special cases
 		const CHAR_CODE_SPACE = " ".charCodeAt(0)
-		const CHAR_CODE_CAPITAL_A = "A".charCodeAt(0)
+		const CHAR_CODE_CAPITAL_A = mapping.lastWordChar;
 		const CHAR_CODE_PARENTH = '('.charCodeAt(0)
-		const CHAR_CODE_CAPITAL_G = 'G'.charCodeAt(0)
+		const CHAR_CODE_CAPITAL_G = mapping.firstWordChar;
     	// \u200B is a zero-width space character. We add it to make the strings the same length
-		const REPLACEMENT_BYTES = [...mapping.replacementCountry + '\u200B'].map(char => char.charCodeAt(0))
-
+		const LAST_WORD_REPLACEMENT = replacementFull.split(' ')
+		const zeroWidthSpace = '\u200B'
+		const multiplierZeroWidthSpace = 1;
+		const stringLenDiff = LAST_WORD_REPLACEMENT[LAST_WORD_REPLACEMENT.length - 1].length - originalFull.split(' ')[originalFull.length - 1].length
+		if(stringLenDiff > 1) {
+			multiplierZeroWidthSpace = stringLenDiff;
+		}
+		for(let i = 0; i < multiplierZeroWidthSpace; i++) {
+			LAST_WORD_REPLACEMENT[LAST_WORD_REPLACEMENT.length - 1] += zeroWidthSpace
+		}
+		const REPLACEMENT_BYTES = [...LAST_WORD_REPLACEMENT[LAST_WORD_REPLACEMENT.length - 1]].map(char => char.charCodeAt(0))
+		console.log(REPLACEMENT_BYTES)
 		// For every possible starting character in our `labelBytes` blob...
 		for(let labelByteStartingIndex = 0; labelByteStartingIndex < labelBytes.length; labelByteStartingIndex++) {
 
@@ -239,11 +251,11 @@
 				}
 				if (parenthStartIndex > -1) {
 					// Replace "(base" with zero-width spaces
-					for (let i = 0; i < mapping.base.length; i++) {
+					for (let i = 0; i < LAST_WORD_REPLACEMENT[originalFull.length - 2].length + LAST_WORD_REPLACEMENT[originalFull.length - 3]; i++) {
 						labelBytes[parenthStartIndex + i] = '\u200B'.charCodeAt(0)
 					}
 					// Replace "originalCountry)" with zero-width spaces
-					for (let i = 0; i < mapping.originalCountry.length+1; i++) {
+					for (let i = 0; i < LAST_WORD_REPLACEMENT[originalFull.length-1].length+1; i++) {
 						labelBytes[countryStartIndex + i] = '\u200B'.charCodeAt(0)
 					}
 				} else {
@@ -266,6 +278,7 @@
 	 */
 	const isAlphaChar = (code) => {
 		return (code > 64 && code < 91) || (code > 96 && code < 123)
-	}	
+	}
+	
 
 })()
